@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/alist-org/alist/v3/pkg/sign"
@@ -33,13 +35,14 @@ var (
 )
 
 func init() {
-	flag.IntVar(&port, "port", 5243, "the proxy port.")
-	flag.BoolVar(&https, "https", false, "use https protocol.")
+	flag.IntVar(&port, "port", getEnvInt("PROXY_PORT", 5243), "the proxy port")
+	flag.BoolVar(&https, "https", getEnvBool("USE_HTTPS", false), "use https")
 	flag.BoolVar(&help, "help", false, "show help")
-	flag.StringVar(&certFile, "cert", "server.crt", "cert file")
-	flag.StringVar(&keyFile, "key", "server.key", "key file")
-	flag.StringVar(&address, "address", "", "alist address")
-	flag.StringVar(&token, "token", "", "alist token")
+	flag.StringVar(&certFile, "cert", getEnv("CERT_FILE", "server.crt"), "cert file")
+	flag.StringVar(&keyFile, "key", getEnv("CERT_KEY", "server.key"), "key file")
+	flag.StringVar(&address, "address", getEnv("ALIST_ADDRESS", ""), "alist address")
+	flag.StringVar(&token, "token", getEnv("ALIST_TOKEN", ""), "alist token")
+
 	flag.Parse()
 	s = sign.NewHMACSign([]byte(token))
 }
@@ -157,4 +160,29 @@ func main() {
 			fmt.Printf("failed to start: %s\n", err.Error())
 		}
 	}
+}
+
+func getEnv(key, defaultValue string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return defaultValue
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	if value, exists := os.LookupEnv(key); exists {
+		if i, err := strconv.Atoi(value); err == nil {
+			return i
+		}
+	}
+	return defaultValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	if value, exists := os.LookupEnv(key); exists {
+		if b, err := strconv.ParseBool(value); err == nil {
+			return b
+		}
+	}
+	return defaultValue
 }
